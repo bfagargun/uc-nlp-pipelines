@@ -1,0 +1,59 @@
+{
+  "manuscript_version": "v1.0-manuscript",
+  "release_date": "2026-05-24",
+  "cohort": {
+    "procedures": 830,
+    "patients": 499,
+    "paired_mes_nhi": 799,
+    "paired_diagnosis_mes": 829,
+    "paired_findings_mes": 829
+  },
+  "nhi_pipeline": {
+    "reference_standard": "blinded gastrointestinal pathologist 2",
+    "n": 799,
+    "multiclass": {
+      "quadratic_weighted_kappa": 0.87,
+      "accuracy": 0.856,
+      "macro_f1": 0.86
+    },
+    "inter_pathologist_kappa_w_ceiling": 0.99,
+    "binary_nhi_ge_2_vs_0_1": {
+      "accuracy": 0.971,
+      "simple_kappa": 0.89,
+      "sensitivity": 0.985,
+      "specificity": 0.893,
+      "ppv": 0.981,
+      "npv": 0.915
+    }
+  },
+  "mes_pipeline_diagnosis_field": {
+    "reference_standard": "endoscopist-assigned integer MES",
+    "n": 829,
+    "quadratic_weighted_kappa": 0.97,
+    "accuracy": 0.928,
+    "exact_agreements": "770/829"
+  },
+  "mes_pipeline_narrative_findings": {
+    "reference_standard": "endoscopist-assigned integer MES",
+    "n": 829,
+    "quadratic_weighted_kappa": 0.66,
+    "accuracy_exact": 0.578,
+    "accuracy_within_1_grade": 0.906,
+    "binary_remission_active": {
+      "accuracy": 0.803,
+      "sensitivity": 0.754,
+      "specificity": 0.841
+    },
+    "use": "exploratory benchmark only; not used in primary analyses"
+  },
+  "concordance": {
+    "mes_nhi_spearman_rho": 0.59,
+    "endoscopic_remission_rate": "346/799 (43.3%)",
+    "histologic_remission_rate": "121/799 (15.1%)",
+    "hidden_activity_in_endo_remission": "231/346 (66.8%)",
+    "mayo_0_hidden_activity": "78/160 (48.8%)",
+    "mayo_1_hidden_activity": "153/186 (82.3%)",
+    "chi_squared_mayo_0_vs_1": 42.0,
+    "p_value_mayo_0_vs_1": "<1e-10"
+  }
+}

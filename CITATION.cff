@@ -1,0 +1,38 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the accompanying manuscript and this repository."
+title: "uc-nlp-pipelines: Rule-based NLP for Nancy Histological Index and Mayo Endoscopic Score extraction from Turkish free-text reports"
+abstract: "Deterministic rule-based natural language processing pipelines for the automated extraction of the Nancy Histological Index (NHI) from free-text pathology reports and the Mayo Endoscopic Score (MES) from free-text endoscopy reports, in Turkish, for ulcerative colitis."
+authors:
+  - family-names: "Ağargün"
+    given-names: "Besim Fazıl"
+    affiliation: "Istanbul University, Istanbul Faculty of Medicine"
+    email: "bfagargun@istanbul.edu.tr"
+repository-code: "https://github.com/bfagargun/uc-nlp-pipelines"
+license: MIT
+version: "1.0-manuscript"
+date-released: "2026-05-24"
+keywords:
+  - "natural language processing"
+  - "ulcerative colitis"
+  - "Nancy Histological Index"
+  - "Mayo Endoscopic Score"
+  - "rule-based NLP"
+  - "inflammatory bowel disease"
+  - "histologic remission"
+  - "Turkish clinical text"
+preferred-citation:
+  type: article
+  title: "Hidden histologic activity in endoscopic remission and the histologic dissociation of Mayo 0 and Mayo 1 strata: a real-world ulcerative colitis cohort enabled by NLP-based automated pathology grading"
+  authors:
+    - family-names: "Ağargün"
+      given-names: "Besim Fazıl"
+    - family-names: "Işık"
+      given-names: "Burce"
+    - family-names: "Kızıltaş"
+      given-names: "Cansu"
+    - family-names: "Güner"
+      given-names: "Alper Çağatay"
+    - family-names: "Akyüz"
+      given-names: "Filiz"
+  year: 2026
+  journal: "[journal — fill in after acceptance]"
