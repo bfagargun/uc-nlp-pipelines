@@ -1,0 +1,10 @@
+diff --git a/requirements.txt b/requirements.txt
+index 5fce09b..0ba0cef 100644
+--- a/requirements.txt
++++ b/requirements.txt
+@@ -8,3 +8,5 @@ seaborn>=0.12
+ jupyter>=1.0
+ openpyxl>=3.1
+ regex>=2023.0
++python-docx>=1.0      # notebooks/mayo_nlp_from_bulgular.ipynb (raw DOCX report parsing)
++statsmodels>=0.14      # notebooks/Mayo_Nancy_NLP_Analysis_v4_figures.ipynb (GEE analysis); optional — pipeline code and CI computations fall back to a bootstrap method if unavailable
