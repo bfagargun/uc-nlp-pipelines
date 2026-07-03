@@ -1,33 +1,24 @@
 """
-Shared Turkish-language text preprocessing utilities.
+Shared Turkish-language text normalisation.
 
-PLACEHOLDER — replace function bodies with the locked preprocessing
-routines used in the manuscript validation.
+Ported verbatim from the validated pipeline notebook
+(notebooks/Mayo_Nancy_NLP_Analysis_v3.ipynb, cell "normalize"). Used by the
+NHI pipeline. The MES pipelines use their own lighter-weight uppercase +
+whitespace normalisation (they do not depend on Turkish diacritic folding),
+defined locally in mes_pipeline/diagnosis_field/rules/mes_patterns.py.
 """
 
 import re
-import unicodedata
 
 
-def normalise_turkish(text: str) -> str:
-    """Lowercase + diacritic normalisation (preserving Turkish-specific characters).
-
-    Note: standard NFKD normalisation will incorrectly strip dots from 'ı' / 'i'.
-    This routine should preserve them.
-    """
-    if text is None:
+def normalize(text: str) -> str:
+    """Uppercase, fold Turkish diacritics to ASCII, collapse whitespace."""
+    if not isinstance(text, str):
         return ""
-    # Replace as needed when pasting the live code.
-    text = text.replace("İ", "i").replace("I", "ı")
-    text = text.lower()
-    text = re.sub(r"\s+", " ", text)
-    return text.strip()
-
-
-def split_sentences(text: str) -> list[str]:
-    """Naive sentence boundary detection."""
-    return [s.strip() for s in re.split(r"[.!?]+\s+", text) if s.strip()]
-
-
-def strip_punct(text: str) -> str:
-    return re.sub(r"[^\w\s]", " ", text)
+    t = text.upper()
+    t = t.replace('\u0130', 'I')  # İ -> I
+    for src, dst in [('\u00dc', 'U'), ('\u00d6', 'O'), ('\u00c7', 'C'),
+                      ('\u015e', 'S'), ('\u011e', 'G')]:
+        t = t.replace(src, dst)
+    t = re.sub(r'\s+', ' ', t)
+    return t.strip()

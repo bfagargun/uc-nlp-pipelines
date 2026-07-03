@@ -31,7 +31,7 @@
     "n": 829,
     "quadratic_weighted_kappa": 0.97,
     "accuracy": 0.928,
-    "exact_agreements": "770/829"
+    "exact_agreements": "769/829"
   },
   "mes_pipeline_narrative_findings": {
     "reference_standard": "endoscopist-assigned integer MES",
@@ -55,5 +55,6 @@
     "mayo_1_hidden_activity": "153/186 (82.3%)",
     "chi_squared_mayo_0_vs_1": 42.0,
     "p_value_mayo_0_vs_1": "<1e-10"
-  }
+  },
+  "_correction_note": "exact_agreements for mes_pipeline_diagnosis_field corrected from 770/829 to 769/829 on verification against manuscript Results 3.3.2 and direct recomputation from v8.xlsx (2026-07-03)."
 }

@@ -4,19 +4,12 @@ Rule-based extraction of the **Nancy Histological Index** (grades 0–4) from Tu
 
 ## How it works
 
-The pipeline executes four deterministic stages:
+1. **Text normalisation** (`shared/text_normalisation.py`) — uppercasing and Turkish diacritic folding (İ/Ü/Ö/Ç/Ş/Ğ -> ASCII), whitespace collapse.
+2. **Report segmentation** (`extract_nhi.py::split_segments`) — splits the normalised report at roman/arabic-numeral biopsy-site markers (e.g. `I-`, `1)`). Segments are positional (`segment_1`, `segment_2`, ...); the report text itself, not the segmentation step, records which colon site each segment corresponds to.
+3. **Per-segment grading** (`extract_nhi.py::grade_segment`) — a single hierarchical, rule-priority decision tree, evaluated top-down: ulceration (grade 4, unless negated or in an excluded polyp/terminal-ileum context) → severe/crypt-abscess/basal-plasmacytosis markers (grade 3) → active inflammation (grade 2) → chronic inflammation (grade 1) → normal (grade 0). It draws its regex constants from `rules/ulceration.py`, `rules/acute_inflammation.py`, `rules/chronic_inflammation.py`, and `rules/exclusions.py`.
+4. **Procedure-level aggregation** — the procedure-level NHI is the **maximum** grade across all segments (`extract_nhi.py::classify_report` / `extract_procedure_nhi`).
 
-1. **Report segmentation** — splits the pathology narrative into per-segment biopsy descriptions (rectum, sigmoid, descending, transverse, ascending, caecum). Polypectomy specimens and terminal ileal biopsies are excluded.
-2. **Turkish-language preprocessing** — lowercasing, diacritic normalisation, sentence boundary detection (`shared/text_normalisation.py`).
-3. **Feature extraction** — three NHI constituent features are extracted by regex layers:
-   - **Acute inflammatory infiltrate** (`rules/acute_inflammation.py`) — including cryptitis, crypt abscess, neutrophilic infiltrate of the lamina propria. Graded: absent / mild / moderate / severe.
-   - **Chronic inflammatory infiltrate** (`rules/chronic_inflammation.py`) — graded: absent / mild / moderate / severe.
-   - **Ulceration / erosion** (`rules/ulceration.py`) — present / absent.
-4. **NHI mapping** (`rules/nhi_mapping.py`) — extracted features are deterministically mapped to NHI grades 0–4 per the published Nancy schema (Marchal-Bressenot et al., *Gut* 2017).
-
-## Procedure-level aggregation
-
-Segment-level NHI grades are aggregated to a procedure-level NHI by taking the **maximum** across all evaluable segments, mirroring the convention used by the reference pathologists.
+This is a single deterministic function per segment, not a "score three sub-features independently, then map to a grade" pipeline — see the note on `rules/nhi_mapping.py` below.
 
 ## Usage
 
@@ -24,16 +17,13 @@ Segment-level NHI grades are aggregated to a procedure-level NHI by taking the *
 from nhi_pipeline.extract_nhi import extract_procedure_nhi
 
 text = """
-TANI: Ülseratif kolit aktivasyonu
-...
-REKTUM BIOPSISI: Mukozada belirgin kronik aktif iltihap...
-SIGMOID BIOPSISI: Kronik aktif kolit, ülserasyon (+)...
+I- REKTUM: Mukozada belirgin kronik aktif iltihap...
+II- SIGMOID: Kronik aktif kolit, ulserasyon izlendi...
 """
 result = extract_procedure_nhi(text)
 # {
 #   'procedure_nhi': 4,
-#   'segments': {'rektum': 3, 'sigmoid': 4},
-#   'features_per_segment': {...},
+#   'segments': {'segment_1': 2, 'segment_2': 4},
 #   'flags': []
 # }
 ```
@@ -48,7 +38,9 @@ Input CSV should have at minimum two columns: `procedure_id`, `report_text`.
 
 ## Validation
 
-See `validation_results/nhi_confusion_matrix.csv` and `notebooks/01_nhi_validation.ipynb`.
+See `validation_results/nhi_confusion_matrix.csv`, `notebooks/Mayo_Nancy_NLP_Analysis_v3.ipynb` (development validation) and `notebooks/NHI_heldout_validation.ipynb` (temporal held-out validation + per-rule provenance audit).
+
+**Note on `rules/nhi_mapping.py`:** that file documents the canonical Nancy grade definitions (Marchal-Bressenot et al.) as a *reference table*. The actual implemented decision tree in `extract_nhi.py::grade_segment()` is a single hierarchical rule-priority function (ported verbatim from the validated notebook) rather than a two-step "score sub-features, then map to grade" pipeline — it does not import or call `nhi_mapping.py`. Both describe the same grade semantics; only `grade_segment()` is what actually ran to produce the manuscript's validation numbers.
 
 | Metric | Value |
 |---|---|

@@ -1,31 +1,16 @@
 """
-Acute inflammatory infiltrate detection.
-
-PLACEHOLDER — paste the locked regex rules used in the manuscript validation.
-
-Output convention:
-    0 = absent
-    1 = mild
-    2 = moderate
-    3 = severe
-
-Typical Turkish trigger phrases (non-exhaustive; refine when pasting real rules):
-    - "kript abse(si)?" / "crypt abscess"
-    - "kriptit(is)?" / "cryptitis"
-    - "nötrofil(ik)? infiltrasyon"
-    - "akut iltihab(i|î|i)? aktivit(e|esi) (hafif|orta|şiddetli)"
+NHI Grade 2-3 — acute inflammatory infiltrate rules.
+Ported verbatim from notebooks/Mayo_Nancy_NLP_Analysis_v3.ipynb (cell 15),
+locked and used in the manuscript validation (kappa_w = 0.87, n = 799).
 """
 
 import re
 
-# Replace with the locked rule set.
-ACUTE_PATTERNS = {
-    # 3: severe
-    # 2: moderate
-    # 1: mild
-    # 0: absent (default)
-}
+# GRADE 3: Severe active markers
+RE_CRYPT_ABS = re.compile(r'KRIPT\s*ABSE')
+RE_BASAL_PL = re.compile(r'BAZAL\s+(LENFOPLAZMASITOZ|PLAZMOSITOZ|LENFOPLAZM)')
+RE_SEV_ACTIVE = re.compile(r'SIDDETLI\s+AKTIF')
 
-
-def grade_acute(segment_text: str) -> int:
-    raise NotImplementedError("Paste locked acute-infiltrate rules.")
+# GRADE 2-3 discrimination
+RE_ACTIVE = re.compile(r'\bAKTIF\b')
+RE_MILD = re.compile(r'(HAFIF|MINIMAL|SEYREK|FOKAL|ODAKSAL)\s+(AKTIF|KRIPTIT)')

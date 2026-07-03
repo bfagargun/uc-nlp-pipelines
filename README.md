@@ -26,6 +26,45 @@ Extracts the **Mayo Endoscopic Score** (grades 0–3) from Turkish free-text end
 
 ---
 
+## Repository status (2026-07-03)
+
+An earlier published version of this repository contained scaffold
+placeholder files (raising `NotImplementedError`) in place of the real
+pipeline code for `nhi_pipeline/`, `mes_pipeline/diagnosis_field/`, and
+`mes_pipeline/narrative_findings/`. This has been corrected:
+
+- **NHI pipeline** and **MES narrative-findings (blind) pipeline**: real
+  code restored, ported verbatim from the maintainer's original validation
+  notebooks (`notebooks/Mayo_Nancy_NLP_Analysis_v3.ipynb` and
+  `notebooks/mayo_nlp_from_bulgular.ipynb`).
+- **MES diagnosis-field pipeline** (the primary pipeline used in all
+  manuscript analyses): the original source file could not be located.
+  This implementation was **reconstructed** by reverse-engineering the
+  regex logic against the pipeline's already-computed output, stored in
+  the dataset as `nlp_mayo_from_tanı`, then independently verified:
+  100% exact match (829/829) against that stored column, and exact
+  reproduction of the manuscript's reported validation metrics (kappa_w
+  = 0.968, accuracy = 92.76%, 769/829 exact agreements against the
+  reference standard — see `mes_pipeline/diagnosis_field/rules/
+  mes_patterns.py` for the full provenance note).
+- A numeric inconsistency was also corrected: this README and
+  `validation_results/summary_metrics.json` previously reported 770/829
+  exact agreements for the diagnosis-field MES pipeline; direct
+  recomputation confirms **769/829**, matching the manuscript.
+- Missing `validation_results/*.csv` confusion matrices were computed
+  from the real pipelines and added.
+- `notebooks/NHI_heldout_validation.ipynb` and
+  `notebooks/Mayo_Nancy_NLP_Analysis_v4_figures.ipynb` were added
+  (temporal held-out validation / per-rule provenance audit, and the
+  manuscript figures / patient-clustered bootstrap CIs, respectively).
+
+If you cloned this repository before this date, please re-clone or pull
+the latest `master`. The maintainer should confirm whether the
+`v1.0-manuscript` tag needs to be re-cut against the corrected code
+before citing it as the validated snapshot.
+
+---
+
 ## Validation summary (from the accompanying manuscript)
 
 ### NHI pipeline (against blinded reference pathologist, n = 799 procedures)
@@ -44,7 +83,7 @@ Extracts the **Mayo Endoscopic Score** (grades 0–3) from Turkish free-text end
 | Metric | Value |
 |---|---|
 | Quadratic-weighted Cohen's κ | **0.97** |
-| Accuracy (exact agreement) | 92.8% (770/829) |
+| Accuracy (exact agreement) | 92.8% (769/829) |
 
 ### MES pipeline — blind narrative findings (exploratory, n = 829)
 | Metric | Value |
@@ -68,13 +107,13 @@ uc-nlp-pipelines/
 │
 ├── nhi_pipeline/
 │   ├── README.md
-│   ├── extract_nhi.py              <- main entry point
+│   ├── extract_nhi.py              <- main entry point (segmentation + grading)
 │   ├── rules/
 │   │   ├── acute_inflammation.py
 │   │   ├── chronic_inflammation.py
 │   │   ├── ulceration.py
-│   │   └── nhi_mapping.py
-│   ├── preprocessing.py
+│   │   ├── exclusions.py           <- polypectomy / terminal-ileum exclusion patterns
+│   │   └── nhi_mapping.py          <- reference-only Nancy grade table (not used by extract_nhi.py; see note below)
 │   └── tests/
 │       └── test_extract_nhi.py
 │
@@ -92,8 +131,7 @@ uc-nlp-pipelines/
 │       └── test_extract_mes.py
 │
 ├── shared/
-│   ├── text_normalisation.py       <- shared Turkish-language preprocessing
-│   └── segment_split.py
+│   └── text_normalisation.py       <- shared Turkish-language preprocessing
 │
 ├── language_ports/
 │   └── english/                    <- English adaptation template (NOT independently validated)
@@ -103,9 +141,10 @@ uc-nlp-pipelines/
 │       └── example_reports_en.py
 │
 ├── notebooks/
-│   ├── 01_nhi_validation.ipynb
-│   ├── 02_mes_validation.ipynb
-│   └── 03_concordance_analysis.ipynb
+│   ├── Mayo_Nancy_NLP_Analysis_v3.ipynb       <- NHI pipeline development + full-cohort validation
+│   ├── Mayo_Nancy_NLP_Analysis_v4_figures.ipynb <- manuscript figures + patient-clustered bootstrap CIs
+│   ├── NHI_heldout_validation.ipynb           <- temporal held-out validation + per-rule provenance audit
+│   └── mayo_nlp_from_bulgular.ipynb           <- narrative-findings (blind) MES pipeline, built from source DOCX
 │
 ├── validation_results/
 │   ├── nhi_confusion_matrix.csv

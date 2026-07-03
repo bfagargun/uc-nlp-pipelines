@@ -25,7 +25,7 @@ Range entries are flagged and resolved to a single integer by review of the corr
 | Metric | Value |
 |---|---|
 | Quadratic-weighted κ | **0.97** |
-| Accuracy (exact agreement) | 92.8% (770/829) |
+| Accuracy (exact agreement) | 92.8% (769/829) |
 
 ### Usage
 ```python
@@ -33,7 +33,7 @@ from mes_pipeline.diagnosis_field.extract_mes_tani import extract_mes_from_diagn
 
 report_text = "TANI: Ülseratif kolit, Mayo 1"
 result = extract_mes_from_diagnosis(report_text)
-# {'mes': 1, 'raw_match': 'Mayo 1', 'is_range': False, 'range': None}
+# {'mes': 1, 'raw_match': 'MAYO 1', 'is_range': False, 'range': None}
 ```
 
 ---
@@ -66,9 +66,9 @@ The reduced performance relative to the diagnosis-field pipeline reflects the in
 ```python
 from mes_pipeline.narrative_findings.extract_mes_bulgular import extract_mes_from_findings
 
-report_text = "BULGULAR: Mukozada damarlanma silik, friabilite (+), nokta ülserasyonlar..."
+report_text = "BULGULAR: Mukozada eritem, ödem, frajilite, eroziv değişiklikler izlendi."
 result = extract_mes_from_findings(report_text)
-# {'mes': 2, 'descriptors_found': [...]}
+# {'mes': 2, 'descriptors_found': ['erythema', 'edema', 'friable']}
 ```
 
 ---
