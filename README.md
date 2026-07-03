@@ -95,6 +95,13 @@ uc-nlp-pipelines/
 │   ├── text_normalisation.py       <- shared Turkish-language preprocessing
 │   └── segment_split.py
 │
+├── language_ports/
+│   └── english/                    <- English adaptation template (NOT independently validated)
+│       ├── README.md
+│       ├── nhi_pipeline_en.py
+│       ├── mes_pipeline_en.py
+│       └── example_reports_en.py
+│
 ├── notebooks/
 │   ├── 01_nhi_validation.ipynb
 │   ├── 02_mes_validation.ipynb
@@ -169,6 +176,16 @@ Aggregate validation outputs that *can* be shared (confusion matrices, summary m
 
 ---
 
+## English-language adaptation template
+
+`language_ports/english/` contains an **English-language adaptation template** that re-implements the same rule architecture (segment splitting → hierarchical grading → procedure-level aggregation) using terminology drawn from the published Nancy Histological Index descriptors and standard Mayo Endoscopic Score conventions.
+
+**This template is a proof-of-concept, not a validated pipeline.** It has been checked only against a small set of hand-written synthetic example sentences; it has not been evaluated against a pathologist- or endoscopist-scored English cohort. See `language_ports/english/README.md` for full details, including a documented reporting-convention difference (explicit negation phrasing) discovered while building the template — a concrete illustration of why local, blinded validation is required before adapting these rules to a new language or centre.
+
+Centres with English-language reports are welcome to use this as a starting point and to contribute validation results back via pull request (see Contributing, below).
+
+---
+
 ## Locked rule set
 
 The rule sets used in the manuscript validation are tagged as **`v1.0-manuscript`** in this repository. Any subsequent edits to the rules will not affect the validation reported in the paper.
@@ -183,7 +200,7 @@ git checkout v1.0-manuscript
 
 External pull requests are welcome for:
 - Bug fixes in regex rules,
-- Additional language ports (e.g. English, Spanish, Arabic),
+- Additional language ports (e.g. English, Spanish, Arabic) — see `language_ports/english/` for an example port and validation checklist,
 - New histologic-index extensions (e.g. Robarts Histopathology Index).
 
 Please open an issue to discuss methodological changes before submitting a PR.

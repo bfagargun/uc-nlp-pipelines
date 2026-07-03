@@ -1,0 +1,215 @@
+"""
+Nancy Histological Index (NHI) — English-language adaptation template
+=======================================================================
+
+STATUS: PROOF-OF-CONCEPT / ADAPTATION TEMPLATE — NOT INDEPENDENTLY VALIDATED
+
+This module reproduces the ARCHITECTURE of the rule-based NLP pipeline
+described in [manuscript citation], which was developed and validated on
+830 free-text Turkish pathology reports (kappa_w = 0.87, accuracy 85.6%
+against blinded reference-pathologist re-scoring; see Table 4 of the
+manuscript). The Turkish rule set and its validation are the primary,
+peer-reviewed result of that work.
+
+This file translates the SAME rule categories and grading logic into
+English, using terminology drawn from the original Nancy Histological
+Index descriptors (Marchal-Bressenot et al., Gut 2017) and standard
+English-language GI pathology reporting conventions. It has been tested
+only against a small set of hand-written synthetic example reports
+(see example_reports_en.py) — NOT against a pathologist-scored English
+cohort. Centres wishing to use this on real reports MUST validate it
+against their own local reporting conventions and a blinded reference
+standard before any clinical or research use, following the methodology
+described in the manuscript (Methods, and Supplementary Table S2 for the
+per-rule provenance-audit approach).
+
+Architecture (identical to the validated Turkish pipeline):
+    1. normalize()       - case/whitespace normalisation
+    2. split_segments()  - split a report into per-biopsy-site segments
+    3. grade_segment()   - hierarchical rule-based grading of one segment
+    4. classify_report() - procedure-level NHI = max(segment grades)
+
+Grading hierarchy (NHI 0-4, Nancy Histological Index):
+    Grade 4 - Ulceration
+    Grade 3 - Severe / moderate-to-severe acute inflammatory infiltrate
+              (crypt abscesses, basal plasmacytosis, or explicit "severe
+              active" language)
+    Grade 2 - Acute inflammatory infiltrate (neutrophils) present, not
+              meeting grade-3 criteria
+    Grade 1 - Chronic inflammatory infiltrate only, no acute infiltrate,
+              no ulceration
+    Grade 0 - Normal / no significant histologic abnormality
+"""
+
+import re
+import numpy as np
+
+
+# ---------------------------------------------------------------------
+# 1. Text normalisation
+# ---------------------------------------------------------------------
+def normalize(text):
+    """Uppercase + collapse whitespace. English reports need no diacritic
+    stripping (the Turkish pipeline additionally strips Turkish diacritics
+    at this step)."""
+    if not isinstance(text, str):
+        return ""
+    t = text.upper()
+    t = re.sub(r"\s+", " ", t)
+    return t.strip()
+
+
+# ---------------------------------------------------------------------
+# 2. Segment splitting (per biopsy site)
+# ---------------------------------------------------------------------
+def split_segments(normalized_text):
+    """Split a report into per-biopsy-site segments, using roman-numeral
+    or arabic-numeral site markers (e.g. 'I-', '1)'). This mirrors the
+    validated Turkish pipeline's splitter exactly.
+
+    NOTE: many English-language reports instead label sites with bare
+    named headers ('RECTUM:', 'SIGMOID COLON:') and no numeral marker at
+    all. If your centre's reports use that convention, this function
+    must be adapted BEFORE use -- a report with no numeral markers is
+    currently treated as a single segment, which is safe (it just means
+    procedure-level NHI = max over the whole un-split report) but loses
+    per-site granularity."""
+    pattern = r"(?:^|\s|\n)(?:I{1,4}V?|VI{0,3}|[0-9]+)[\-\)]\s*"
+    segs = re.split(pattern, normalized_text)
+    segs = [s.strip() for s in segs if s.strip()]
+    return segs if segs else [normalized_text]
+
+
+# ---------------------------------------------------------------------
+# 3. Rule definitions — regex patterns (English adaptation of the
+#    locked Turkish rule set; see manuscript Supplementary Table S1 for
+#    the source rule list this was translated from)
+# ---------------------------------------------------------------------
+
+# GRADE 4: Ulceration
+RE_ULCER = re.compile(r"\b(ULCER\w*|EROSION\w*)")
+RE_NEG_ULCER = re.compile(
+    r"(NO|NOT|WITHOUT|ABSENT|NEGATIVE FOR)\s+(EVIDENCE OF\s+)?ULCER\w*"
+    r"|ULCER\w*\s+(NOT\s+(SEEN|IDENTIFIED|PRESENT)|IS\s+ABSENT)"
+)
+
+# GRADE 3: Severe active markers
+RE_CRYPT_ABS = re.compile(r"CRYPT\s*ABSCESS")
+RE_NEG_CRYPT_ABS = re.compile(
+    r"(NO|NOT|WITHOUT|ABSENT|NEGATIVE FOR)\s+(EVIDENCE OF\s+)?CRYPT\s*ABSCESS"
+)
+RE_BASAL_PL = re.compile(r"BASAL\s+(LYMPHOPLASMACYTOSIS|PLASMACYTOSIS|LYMPHOPLASMACYT\w*)")
+RE_SEV_ACTIVE = re.compile(r"SEVERE(LY)?\s+ACTIVE|SEVERE\s+ACTIVITY")
+
+# GRADE 2-3 discrimination
+RE_ACTIVE = re.compile(r"\bACTIVE\b|NEUTROPHIL\w*\s+INFILTRAT\w*|ACUTE\s+INFLAMM\w*")
+RE_NEG_ACTIVE = re.compile(
+    r"(NO|NOT|WITHOUT|ABSENT|NEGATIVE FOR)\s+(EVIDENCE OF\s+)?"
+    r"(ACTIVE\s+\w+|ACTIVITY|ACUTE\s+INFLAMM\w*|NEUTROPHIL\w*)"
+)
+RE_MILD = re.compile(
+    r"(MILD|MINIMAL|FOCAL|OCCASIONAL|RARE|SCATTERED)\s+"
+    r"(ACTIVE|ACTIVITY|CRYPTITIS|NEUTROPHIL\w*)"
+)
+
+# GRADE 1: Chronic only
+RE_CHRONIC = re.compile(r"CHRONIC\s+(INFLAMM\w*|COLITIS|PROCTITIS|ILEITIS)")
+RE_NEG_CHRONIC = re.compile(
+    r"(NO|NOT|WITHOUT|ABSENT|NEGATIVE FOR)\s+(EVIDENCE OF\s+)?"
+    r"(ACTIVE\s+OR\s+)?CHRONIC\s+(INFLAMM\w*|COLITIS|PROCTITIS|ILEITIS)"
+)
+
+# GRADE 0: Normal
+RE_NORMAL = re.compile(r"\bNORMAL\b|NO\s+SIGNIFICANT\s+(HISTOLOGIC\w*\s+)?ABNORMALIT\w*|WITHIN\s+NORMAL\s+LIMITS")
+
+# Exclusion contexts (not scored for NHI)
+RE_POLYP = re.compile(
+    r"(PSEUDOPOLYP\w*|POLYPECTOMY|\bPOLYP\b|ADENOMATOUS|ADENOMA\w*|"
+    r"INFLAMMATORY\s+POLYP|IMMUNE\s+REACTION)"
+)
+RE_ILEUM = re.compile(r"TERMINAL\s+ILEUM")
+
+RULES_META = {
+    "ULCER": (RE_ULCER, 4),
+    "NEG_ULCER": (RE_NEG_ULCER, None),
+    "CRYPT_ABS": (RE_CRYPT_ABS, 3),
+    "BASAL_PL": (RE_BASAL_PL, 3),
+    "SEV_ACTIVE": (RE_SEV_ACTIVE, 3),
+    "ACTIVE": (RE_ACTIVE, 2),
+    "MILD": (RE_MILD, None),
+    "CHRONIC": (RE_CHRONIC, 1),
+    "NORMAL": (RE_NORMAL, 0),
+    "POLYP": (RE_POLYP, None),
+    "ILEUM": (RE_ILEUM, None),
+}
+
+
+# ---------------------------------------------------------------------
+# 4. Grading logic (identical decision tree to the validated Turkish
+#    pipeline — see manuscript Methods 2.3 / grade_segment())
+# ---------------------------------------------------------------------
+def grade_segment(seg):
+    is_polyp = bool(RE_POLYP.search(seg))
+    is_ileum = bool(RE_ILEUM.search(seg))
+
+    if (RE_ULCER.search(seg) and not RE_NEG_ULCER.search(seg)
+            and not is_polyp and not is_ileum):
+        return 4
+
+    has_abs = bool(RE_CRYPT_ABS.search(seg)) and not bool(RE_NEG_CRYPT_ABS.search(seg))
+    has_basal = bool(RE_BASAL_PL.search(seg))
+    has_sev = bool(RE_SEV_ACTIVE.search(seg))
+    has_active = bool(RE_ACTIVE.search(seg)) and not bool(RE_NEG_ACTIVE.search(seg))
+    has_mild = bool(RE_MILD.search(seg))
+
+    if has_sev:
+        return 3
+    if has_abs and has_active and not has_mild:
+        return 3
+    if has_basal and has_active and not has_mild:
+        return 3
+    if has_abs and not is_polyp:
+        return 3
+    if has_active:
+        return 2
+
+    has_chronic = bool(RE_CHRONIC.search(seg)) and not bool(RE_NEG_CHRONIC.search(seg))
+    if has_chronic:
+        return 1
+
+    if RE_NORMAL.search(seg):
+        return 0
+
+    # Generic chronic-pattern fallback (e.g. "chronic inflammatory
+    # infiltrate" without matching the exact RE_CHRONIC noun list),
+    # guarded against explicit negation.
+    if ("INFLAMMATION" in seg or "INFLAMED" in seg) and not RE_NEG_CHRONIC.search(seg):
+        return 1
+
+    return 1  # unclassified text defaults to grade 1, matching the
+              # validated Turkish pipeline's default branch
+
+
+def classify_report(text):
+    """Procedure-level NHI = maximum grade among all eligible segments."""
+    if not isinstance(text, str) or not text.strip():
+        return np.nan
+    segs = split_segments(normalize(text))
+    grades = [grade_segment(s) for s in segs]
+    return max(grades) if grades else np.nan
+
+
+if __name__ == "__main__":
+    from example_reports_en import NHI_EXAMPLES
+
+    print("=" * 70)
+    print("NHI English adaptation template — synthetic example run")
+    print("(NOT a validation — see module docstring)")
+    print("=" * 70)
+    correct = 0
+    for text, expected in NHI_EXAMPLES:
+        pred = classify_report(text)
+        ok = "OK" if pred == expected else "MISMATCH"
+        correct += (pred == expected)
+        print(f"[{ok:8s}] expected={expected}  predicted={pred}  | {text[:70]}")
+    print(f"\n{correct}/{len(NHI_EXAMPLES)} synthetic examples matched expected grade.")
